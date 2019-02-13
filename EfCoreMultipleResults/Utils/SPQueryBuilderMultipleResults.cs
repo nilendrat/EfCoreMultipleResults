@@ -3,18 +3,32 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Data.SqlClient;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 
 namespace EfCoreMultipleResults
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public static class SPQueryBuilderMultipleResults
     {
+        /// <summary>
+        /// Queries the multiple results.
+        /// </summary>
+        /// <param name="db">The database.</param>
+        /// <param name="sql">The SQL.</param>
+        /// <returns></returns>
         public static MultipleResultSetWrapper QueryMultipleResults(this DbContext db, string sql)
         {
             return new MultipleResultSetWrapper(db, sql);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public class MultipleResultSetWrapper
         {
             /// <summary>
@@ -26,7 +40,7 @@ namespace EfCoreMultipleResults
             /// </summary>
             private readonly string _storedProcedure;
             /// <summary>
-            /// Initializes a new instance of the <see cref="MultipleResultSetWrapper"/> class.
+            /// Initializes a new instance of the <see cref="MultipleResultSetWrapper" /> class.
             /// </summary>
             /// <param name="db">The database.</param>
             /// <param name="sql">The SQL.</param>
@@ -38,8 +52,8 @@ namespace EfCoreMultipleResults
             /// <summary>
             /// Executes the specified parameters.
             /// </summary>
-            /// <typeparam name="T"></typeparam>
             /// <param name="parameters">The parameters.</param>
+            /// <param name="returnTypes">The return types.</param>
             /// <returns></returns>
             public List<List<dynamic>> ExecuteMultipleResults(object parameters, List<Type> returnTypes)
             {
@@ -110,6 +124,68 @@ namespace EfCoreMultipleResults
                     reader.Close();
                 }
 
+                return results;
+            }
+
+            /// <summary>
+            /// Executes the multiple.
+            /// </summary>
+            /// <param name="parameters">The parameters.</param>
+            /// <param name="types">The types.</param>
+            /// <returns></returns>
+            public List<List<dynamic>> ExecuteMultiple(SqlParameter[] parameters, params Type[] types)
+            {
+                List<List<dynamic>> results = new List<List<dynamic>>();
+
+                var connection = _db.Database.GetDbConnection();
+                var command = connection.CreateCommand();
+                command.CommandText = _storedProcedure;
+                command.CommandType = CommandType.StoredProcedure;
+
+                if (parameters != null && parameters.Any())
+                {
+                    command.Parameters.AddRange(parameters);
+                }
+
+                if (command.Connection.State != ConnectionState.Open)
+                {
+                    command.Connection.Open();
+                }
+
+                int counter = 0;
+                using (var reader = command.ExecuteReader())
+                {
+                    do
+                    {
+                        List<dynamic> innerResults = new List<dynamic>();
+                        while (reader.Read())
+                        {
+                            var t = Activator.CreateInstance(types[counter]);
+
+                            var item = Activator.CreateInstance(types[counter]);
+                            for (int inc = 0; inc < reader.FieldCount; inc++)
+                            {
+                                Type type = item.GetType();
+                                string name = reader.GetName(inc);
+                                PropertyInfo property = type.GetProperty(name);
+
+                                if (property != null && name == property.Name)
+                                {
+                                    var value = reader.GetValue(inc);
+                                    if (value != null && value != DBNull.Value)
+                                    {
+                                        property.SetValue(item, Convert.ChangeType(value, Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType), null);
+                                    }
+                                }
+                            }
+                            innerResults.Add(t);
+                        }
+                        results.Add(innerResults);
+                        counter++;
+                    }
+                    while (reader.NextResult());
+                    reader.Close();
+                }
                 return results;
             }
         }

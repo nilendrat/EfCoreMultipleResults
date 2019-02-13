@@ -18,8 +18,11 @@ namespace EfCoreMultipleResults
             returnTypes.Add(typeof(Result1));
             returnTypes.Add(typeof(Result2));
 
-            var results = sampleEntities.QueryMultipleResults(sql: "YOUR_STORE_PROC_NAME").ExecuteMultipleResults(parameters: null, returnTypes: returnTypes);
+            //method one
+            var results1 = sampleEntities.QueryMultipleResults(sql: "YOUR_STORE_PROC_NAME").ExecuteMultipleResults(parameters: null, returnTypes: returnTypes);
 
+            //method two
+            var results2 = sampleEntities.QueryMultipleResults(sql: "YOUR_STORE_PROC_NAME").ExecuteMultiple(null, typeof(Result1), typeof(Result2));
         }
     }
 }

@@ -157,12 +157,14 @@ namespace EfCoreMultipleResults
                 {
                     do
                     {
-                        List<dynamic> innerResults = new List<dynamic>();
+                        var innerResults = new List<dynamic>();
+
+                        if (counter > types.Length - 1) { break; }
+
                         while (reader.Read())
                         {
-                            var t = Activator.CreateInstance(types[counter]);
-
                             var item = Activator.CreateInstance(types[counter]);
+
                             for (int inc = 0; inc < reader.FieldCount; inc++)
                             {
                                 Type type = item.GetType();
@@ -178,7 +180,7 @@ namespace EfCoreMultipleResults
                                     }
                                 }
                             }
-                            innerResults.Add(t);
+                            innerResults.Add(item);
                         }
                         results.Add(innerResults);
                         counter++;

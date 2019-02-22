@@ -55,85 +55,7 @@ namespace EfCoreMultipleResults
             /// <param name="parameters">The parameters.</param>
             /// <param name="returnTypes">The return types.</param>
             /// <returns></returns>
-            public List<List<dynamic>> ExecuteMultipleResults(object parameters, List<Type> returnTypes)
-            {
-                List<List<dynamic>> results = new List<List<dynamic>>();
-
-                var connection = _db.Database.GetDbConnection();
-                var command = connection.CreateCommand();
-                command.CommandText = _storedProcedure;
-                command.CommandType = CommandType.StoredProcedure;
-
-                if (parameters != null)
-                {
-                    var paramType = parameters.GetType();
-
-                    foreach (var pi in paramType.GetProperties())
-                    {
-                        DbParameter param = command.CreateParameter();
-                        param.ParameterName = pi.Name;
-                        param.DbType = SqlHelper.GetDbType(pi.PropertyType);
-                        param.Direction = ParameterDirection.Input;
-                        param.Value = paramType.GetProperty(pi.Name).GetValue(parameters);
-
-                        command.Parameters.Add(param);
-                    }
-                }
-
-                if (command.Connection.State != ConnectionState.Open)
-                {
-                    command.Connection.Open();
-                }
-
-                int counter = 0;
-
-                using (var reader = command.ExecuteReader())
-                {
-                    do
-                    {
-                        List<dynamic> tempResults = new List<dynamic>();
-
-                        while (reader.Read())
-                        {
-
-                            var t = Activator.CreateInstance(returnTypes[counter]);
-
-                            for (int inc = 0; inc < reader.FieldCount; inc++)
-                            {
-                                Type type = t.GetType();
-                                string name = reader.GetName(inc);
-                                PropertyInfo prop = type.GetProperty(name);
-                                if (prop != null && name == prop.Name)
-                                {
-
-                                    var value = reader.GetValue(inc);
-                                    if (value != DBNull.Value)
-                                    {
-                                        prop.SetValue(t, Convert.ChangeType(value, prop.PropertyType), null);
-                                    }
-                                }
-
-                            }
-                            tempResults.Add(t);
-
-                        }
-                        results.Add(tempResults);
-                        counter++;
-                    }
-                    while (reader.NextResult());
-                    reader.Close();
-                }
-
-                return results;
-            }
-
-            /// <summary>
-            /// Executes the multiple.
-            /// </summary>
-            /// <param name="parameters">The parameters.</param>
-            /// <param name="types">The types.</param>
-            /// <returns></returns>
-            public List<List<dynamic>> ExecuteMultiple(SqlParameter[] parameters, params Type[] types)
+            public List<List<dynamic>> ExecuteMultipleResults(SqlParameter[] parameters, params Type[] types)
             {
                 List<List<dynamic>> results = new List<List<dynamic>>();
 
@@ -190,6 +112,7 @@ namespace EfCoreMultipleResults
                 }
                 return results;
             }
+                        
         }
     }
 }
